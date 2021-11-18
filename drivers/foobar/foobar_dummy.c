@@ -78,10 +78,24 @@ static int dummy_send(struct foobar_device *dev, unsigned tag, unsigned data)
 	return 0;
 }
 
+static int dummy_dev_send(struct device *device, unsigned tag, unsigned data)
+{
+	return dummy_send(container_of(device, struct foobar_device, device), tag, data);
+/*	unsigned long *dev_addr = (unsigned long*) dev->base_addr;
+
+	if (dev->active) {
+		*(dev_addr + tag) = data;
+	}
+	return 0;
+	*/
+}
+
+
 static const struct foobar_device_ops dummy_foobardev_ops = {
 	.init		= dummy_dev_init,
 	.uninit		= dummy_dev_uninit,
 	.send		= dummy_send,
+	.dev_send	= dummy_dev_send,
 };
 
 int numdummies = 0;

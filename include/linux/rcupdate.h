@@ -604,6 +604,7 @@ static inline void rcu_preempt_sleep_check(void)
 	/* Dependency order vs. p above. */ \
 	typeof(*p) *________p1 = (typeof(*p) *__force)lockless_dereference(p); \
 	RCU_LOCKDEP_WARN(!(c), "suspicious rcu_dereference_check() usage"); \
+  rcu_dereference_lvds((void *) p); \
 	rcu_dereference_sparse(p, space); \
 	((typeof(*p) __force __kernel *)(________p1)); \
 })
@@ -625,6 +626,10 @@ static inline void rcu_preempt_sleep_check(void)
  * @v: The value to statically initialize with.
  */
 #define RCU_INITIALIZER(v) (typeof(*(v)) __force __rcu *)(v)
+
+static inline void rcu_assign_pointer_lvds(void *p, void *v) {
+  pr_debug("rcu_assign_pointer_lvds ptr %p | val %p", p, v);
+}
 
 /**
  * rcu_assign_pointer() - assign to RCU-protected pointer
@@ -661,6 +666,7 @@ static inline void rcu_preempt_sleep_check(void)
 ({									      \
 	uintptr_t _r_a_p__v = (uintptr_t)(v);				      \
 									      \
+  rcu_assign_pointer_lvds( (void *) p, (void *) v); \
 	if (__builtin_constant_p(v) && (_r_a_p__v) == (uintptr_t)NULL)	      \
 		WRITE_ONCE((p), (typeof(p))(_r_a_p__v));		      \
 	else								      \
@@ -783,6 +789,10 @@ static inline void rcu_preempt_sleep_check(void)
  * This is a simple wrapper around rcu_dereference_check().
  */
 #define rcu_dereference(p) rcu_dereference_check(p, 0)
+
+static inline void rcu_dereference_lvds(void *p) {
+    pr_debug("rcu_dereference on %p", p);
+}
 
 /**
  * rcu_dereference_bh() - fetch an RCU-bh-protected pointer for dereferencing

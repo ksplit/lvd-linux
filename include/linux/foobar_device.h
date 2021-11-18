@@ -2,6 +2,7 @@
 #define _FOOBAR_DEVICE_H
 
 #include <linux/spinlock.h>
+#include <linux/device.h>
 
 typedef u64 foobar_features_t;
 
@@ -28,6 +29,7 @@ struct foobar_device_ops {
 	int			(*init)(struct foobar_device *dev);
 	void			(*uninit)(struct foobar_device *dev);
 	int			(*send)(struct foobar_device *dev, unsigned tag, unsigned data);
+	int			(*dev_send)(struct device *dev, unsigned tag, unsigned data);
 };
 
 struct foo_stats {
@@ -36,6 +38,7 @@ struct foo_stats {
 };
 
 struct foobar_device {
+	struct device device;	
 	char			name[32];
 	char			*ext_name;
 	int			nr_rqs[2];
