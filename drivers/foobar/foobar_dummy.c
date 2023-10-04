@@ -1,0 +1,447 @@
+/* dummy.c: a dummy foobar driver */
+
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/foobar_device.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/moduleparam.h>
+#include <linux/slab.h>
+
+#define DRV_NAME	"foobardummy"
+#define DRV_VERSION	"1.0"
+
+static DEFINE_MUTEX(dummy_mutex);
+
+static irqreturn_t foobar_irq_handler(int irq, void *data)
+{
+	struct foobar_device *dev = data;
+
+	dev->irq_count++;
+
+	dev->reset_fn = 0;
+
+	return IRQ_HANDLED;
+}
+
+void foobar_update_fields(struct foobar_device *dev)
+{
+	dev->f1 = 0xadd;
+	dev->f2 = 0xbad;
+	dev->f3 = 0xdad;
+	dev->msix_enabled = 1;
+
+	foobar_bar(dev);
+
+	foobar_bar2(dev);
+}
+
+static int dummy_dev_init(struct foobar_device *dev)
+{
+	int ret;
+
+	spin_lock(&dev->foobar_lock);
+	dev->dstats = kmalloc(sizeof(struct foo_stats), GFP_KERNEL);
+	if (!dev->dstats) {
+		spin_unlock(&dev->foobar_lock);
+		return -ENOMEM;
+	}
+	spin_unlock(&dev->foobar_lock);
+
+	ret = request_irq(dev->irq, foobar_irq_handler, 0, "foobar", dev);
+
+	if (ret) {
+		printk("request_irq for foobar_irq_handler failed: %d\n", ret);
+		return -EINVAL;
+	}
+
+	if (dev->is_virtfn) {
+		foobar_update_fields(dev);
+		dev->reset_fn = 1;
+	}
+
+	return 0;
+}
+
+static void dummy_dev_uninit(struct foobar_device *dev)
+{
+	kfree(dev->dstats);
+}
+
+static int dummy_send(struct foobar_device *dev, unsigned tag, unsigned data)
+{
+	unsigned long *dev_addr = (unsigned long*) dev->base_addr;
+
+	if (dev->active) {
+		*(dev_addr + tag) = data;
+	}
+	return 0;
+}
+
+static int dummy_dev_send(struct device *device, unsigned tag, unsigned data)
+{
+	return dummy_send(container_of(device, struct foobar_device, device), tag, data);
+/*	unsigned long *dev_addr = (unsigned long*) dev->base_addr;
+
+	if (dev->active) {
+		*(dev_addr + tag) = data;
+	}
+	return 0;
+	*/
+}
+
+
+static const struct foobar_device_ops dummy_foobardev_ops = {
+	.init		= dummy_dev_init,
+	.uninit		= dummy_dev_uninit,
+	.send		= dummy_send,
+	.dev_send	= dummy_dev_send,
+};
+
+int numdummies = 0;
+/* Number of dummy devices to be set up by this module. */
+module_param(numdummies, int, 0);
+MODULE_PARM_DESC(numdummies, "Number of dummy pseudo devices");
+
+struct foobar_device *dev_dummy;
+
+struct foobar_priv {
+	int id;
+};
+
+
+/*
+ * Testcase ns1
+ * Type: non-shared lock
+ * Calls to other domain: None
+ * Members updated: None
+ * Usecase:
+ * A non-shared lock does some local operation
+ * Warning: NO as this is a non-shared lock
+ */
+int test_non_shared_lock1(struct foobar_device *dev)
+{
+	void *test;
+	spin_lock(&dev->foobar_lock);
+	test = kmalloc(sizeof(struct foo_stats), GFP_KERNEL);
+	if (!test) {
+		spin_unlock(&dev->foobar_lock);
+		return -ENOMEM;
+	}
+	kfree(test);
+	spin_unlock(&dev->foobar_lock);
+}
+
+/*
+ * Testcase ns2
+ * Type: non-shared lock
+ * Calls to other domain: None
+ * Members updated: foobar_device->dstats
+ * Usecase:
+ * A non-shared lock updating few members of the foobar_device struct
+ * Warning: NO as this is a non-shared lock
+ */
+int test_non_shared_lock2(struct foobar_device *dev)
+{
+	spin_lock(&dev->foobar_lock);
+
+	/* To avoid memory leak, free memory if allocated earlier */
+	if (dev->dstats)
+		kfree(dev->dstats);
+
+	dev->dstats = kmalloc(sizeof(struct foo_stats), GFP_KERNEL);
+	if (!dev->dstats) {
+		spin_unlock(&dev->foobar_lock);
+		return -ENOMEM;
+	}
+	spin_unlock(&dev->foobar_lock);
+	return 0;
+}
+
+/*
+ * Testcase ns3
+ * Type: non-shared lock
+ * Calls to other domain: foobar_init_stats
+ * Members updated: foobar_device->dstats
+ * Usecase:
+ * A non-shared lock updates a few members and calls out to the other domain
+ *
+ * Warning: NO as this is a non-shared lock
+ */
+int test_non_shared_lock3(struct foobar_device *dev)
+{
+	spin_lock(&dev->foobar_lock);
+
+	/* To avoid memory leak, free memory if allocated earlier */
+	if (dev->dstats)
+		kfree(dev->dstats);
+
+	dev->dstats = kmalloc(sizeof(struct foo_stats), GFP_KERNEL);
+	if (!dev->dstats) {
+		spin_unlock(&dev->foobar_lock);
+		return -ENOMEM;
+	}
+
+	dev->flags |= FOO_DSTATS_UPDATED;
+
+	foobar_init_stats(dev);
+
+	spin_unlock(&dev->foobar_lock);
+	return 0;
+}
+
+/*
+ * Testcase ns4
+ * Type: non-shared lock
+ * Calls to other domain: foobar_init_stats
+ * Members updated: foobar_device->dstats
+ * Usecase:
+ * A non-shared local lock updates a few members
+ *
+ * Warning: NO as this is a non-shared local lock
+ */
+int test_non_shared_lock4(struct foobar_device *dev)
+{
+	mutex_lock(&dummy_mutex);
+
+	dev->features |= FOOBAR_MUTEX;
+
+	mutex_unlock(&dummy_mutex);
+
+	return 0;
+}
+
+/*
+ * Testcase sh1
+ * Type: shared lock
+ * Calls to other domain: None
+ * Members updated: None
+ * Usecase:
+ * A shared lock does some local operation
+ * Warning: NO as it does not update any shared datastructure
+ */
+int test_shared_lock1(struct foobar_device *dev)
+{
+	void *test;
+
+	spin_lock(&dev->foo_shared_lock);
+	test = kmalloc(sizeof(struct foo_stats), GFP_KERNEL);
+	if (!test) {
+		spin_unlock(&dev->foo_shared_lock);
+		return -ENOMEM;
+	}
+	kfree(test);
+	spin_unlock(&dev->foo_shared_lock);
+	return 0;
+}
+
+/*
+ * Testcase sh2
+ * Type: shared lock
+ * Calls to other domain: None
+ * Members updated: dev->shared_state
+ * Usecase:
+ * A shared lock that updates a member of foobar_device struct
+ *
+ * Warning: YES. There is no way to synchronize dev->shared_state. There is a
+ * window of race between calling spin_unlock() until we synchronize this
+ * variable at the end of this function.
+ */
+int test_shared_lock2(struct foobar_device *dev)
+{
+	spin_lock(&dev->foo_shared_lock);
+
+	dev->shared_state = FOO_SHARED_STATE;
+
+	spin_unlock(&dev->foo_shared_lock);
+
+	/* XXX: Window of race */
+
+	return 0;
+}
+
+/*
+ * Testcase sh3
+ * Type: shared lock
+ * Calls to other domain: foobar_state_change
+ * Members updated: dev->shared_state
+ * Usecase:
+ * A shared lock that updates a member of foobar_device struct
+ *
+ * Warning: NO. iff we synchronize the updated variable when we call out for
+ * foobar_state_change.
+ */
+int test_shared_lock3(struct foobar_device *dev)
+{
+	spin_lock(&dev->foo_shared_lock);
+
+	dev->shared_state = FOO_SHARED_STATE;
+
+	/* takes dev and uses dev->shared_state */
+	foobar_state_change(dev);
+
+	spin_unlock(&dev->foo_shared_lock);
+
+	return 0;
+}
+
+/*
+ * Testcase sh3a
+ * Type: shared lock
+ * Calls to other domain: foobar_state_change
+ * Members updated: dev->shared_state, dev->shared_flags
+ * Usecase:
+ * A shared lock that updates a member of foobar_device struct and calls out to
+ * the other domain.
+ *
+ * Warning: YES. We do synchronize the updated variable when we call out for
+ * foobar_state_change. After returning from the other domain, we udpate
+ * dev->shared_flags and there is no way to synchronize that variable.
+ */
+int test_shared_lock3a(struct foobar_device *dev)
+{
+	spin_lock(&dev->foo_shared_lock);
+
+	dev->shared_state = FOO_SHARED_STATE;
+
+	/* takes dev and uses dev->shared_state */
+	foobar_state_change(dev);
+
+	dev->shared_flags |= FOO_SHARED_LIVE;
+
+	spin_unlock(&dev->foo_shared_lock);
+
+	/* XXX: Window of race */
+
+	return 0;
+}
+
+/*
+ * Testcase sh3b
+ * Type: shared lock
+ * Calls to other domain: foobar_notify
+ * Members updated: dev->shared_state
+ * Usecase:
+ * A shared lock that updates a member of foobar_device struct and calls out.
+ * but it does not synchronize the updated field
+ *
+ * Warning: YES. Ideally, we would synchronize the updated variable when we
+ * call out to the other domain before unlocking. However, in this scenario,
+ * foobar_notify does not have this shared_state variable in its read/write
+ * set. We will not marshall this variable across.
+ * There is a window of race between calling spin_unlock() until we synchronize
+ * this variable at the end of this function.
+ */
+int test_shared_lock3b(struct foobar_device *dev)
+{
+	spin_lock(&dev->foo_shared_lock);
+
+	dev->shared_state |= FOO_SHARED_STATE;
+
+	/* takes dev, but not uses dev->shared_state */
+	foobar_notify(dev);
+
+	spin_unlock(&dev->foo_shared_lock);
+
+	/* XXX: Window of race */
+
+	return 0;
+}
+
+/*
+ * Testcase sh3c
+ * Type: shared lock
+ * Calls to other domain: foobar_state_change
+ * Members updated: dev->state
+ * Usecase:
+ * A shared lock that updates a member of foobar_device struct and calls out twice
+ *
+ * Warning: NO. Ideally, we would synchronize the updated variable when we
+ * call out to the other domain before unlocking. However, in this scenario,
+ * foobar_notify does not have this shared_state variable in its read/write
+ * set. We will not marshall this variable across. However,the next function
+ * foobar_state_change synchronizes both shared_state shared_flags variable.
+ *
+ */
+int test_shared_lock3c(struct foobar_device *dev)
+{
+	spin_lock(&dev->foo_shared_lock);
+
+	dev->shared_state |= FOO_SHARED_STATE;
+
+	/* takes dev, but not uses dev->shared_state */
+	foobar_notify(dev);
+
+	dev->shared_flags |= FOO_SHARED_LIVE;
+
+	/* takes dev and uses dev->shared_state */
+	foobar_state_change(dev);
+
+	spin_unlock(&dev->foo_shared_lock);
+
+	return 0;
+}
+
+static int __init dummy_init_module(void)
+{
+	int err;
+
+	dev_dummy = alloc_foobardev(0, "dummy0", sizeof(struct foobar_priv));
+
+	if (!dev_dummy)
+		return -ENOMEM;
+
+	dev_dummy->foobardev_ops = &dummy_foobardev_ops;
+	dev_dummy->ext_name = kzalloc(16, GFP_KERNEL);
+
+	/* Get priv from the object allocated to us by the kernel in alloc_foobardev */
+	dev_dummy->priv = foobardev_priv(dev_dummy);
+
+	if (dev_dummy->ext_name) {
+		strncpy(dev_dummy->ext_name, "dummy_ext", 16);
+	}
+
+	dev_dummy->nr_rqs[0] = 1;
+	dev_dummy->nr_rqs[1] = 2;
+
+	dev_dummy->features = FOOBAR_PRIV_ALLOC;
+	dev_dummy->flags = FOO_LOOPBACK;
+
+	spin_lock_init(&dev_dummy->foobar_lock);
+	err = register_foobar(dev_dummy);
+
+	if (err < 0)
+		goto err;
+
+	printk("%s, u_field %lu pub2 %lu\n", __func__, dev_dummy->u_field, dev_dummy->public_2);
+
+	test_non_shared_lock1(dev_dummy);
+	test_non_shared_lock2(dev_dummy);
+	test_non_shared_lock3(dev_dummy);
+	test_non_shared_lock4(dev_dummy);
+
+	test_shared_lock1(dev_dummy);
+	test_shared_lock2(dev_dummy);
+	test_shared_lock3(dev_dummy);
+	test_shared_lock3a(dev_dummy);
+	test_shared_lock3b(dev_dummy);
+	test_shared_lock3c(dev_dummy);
+
+	test_shared_lock1(dev_dummy);
+
+	return 0;
+
+err:
+	free_foobardev(dev_dummy);
+	return err;
+}
+
+static void __exit dummy_cleanup_module(void)
+{
+	unregister_foobar(dev_dummy);
+}
+
+module_init(dummy_init_module);
+module_exit(dummy_cleanup_module);
+MODULE_LICENSE("GPL");
+MODULE_VERSION(DRV_VERSION);
