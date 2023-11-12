@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menuconfig FOOBAR
+	bool "Foobar support"
+	help
+	  Foobar test driver Support.
+
 menuconfig FOOBARDEVICES
 	depends on FOOBAR
 	bool "Foobar device support"

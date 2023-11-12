@@ -7,3 +7,5 @@ prestera-objs		:= prestera_main.o prestera_hw.o prestera_dsa.o \
 			   prestera_router.o prestera_router_hw.o prestera_matchall.o
 
 obj-$(CONFIG_PRESTERA_PCI)	+= prestera_pci.o
+
+ccflags-y += -O1

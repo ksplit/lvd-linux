@@ -24,6 +24,7 @@
 
 static __always_inline bool arch_static_branch(struct static_key *key, bool branch)
 {
+#ifndef CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS 
 	asm_volatile_goto("1:"
 		"jmp %l[l_yes] # objtool NOPs this \n\t"
 		JUMP_TABLE_ENTRY
@@ -31,6 +32,7 @@ static __always_inline bool arch_static_branch(struct static_key *key, bool bran
 
 	return false;
 l_yes:
+#endif
 	return true;
 }
 
@@ -52,6 +54,7 @@ l_yes:
 
 static __always_inline bool arch_static_branch_jump(struct static_key * const key, const bool branch)
 {
+#ifndef CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS 
 	asm_volatile_goto("1:"
 		"jmp %l[l_yes]\n\t"
 		JUMP_TABLE_ENTRY
@@ -59,6 +62,7 @@ static __always_inline bool arch_static_branch_jump(struct static_key * const ke
 
 	return false;
 l_yes:
+#endif
 	return true;
 }
 

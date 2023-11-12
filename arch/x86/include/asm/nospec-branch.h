@@ -13,6 +13,10 @@
 #include <asm/unwind_hints.h>
 #include <asm/percpu.h>
 
+#ifdef CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS
+#include <asm/msr.h>
+#endif
+
 #define RETPOLINE_THUNK_SIZE	32
 
 /*
@@ -317,12 +321,17 @@ extern char __indirect_thunk_end[];
 static __always_inline
 void alternative_msr_write(unsigned int msr, u64 val, unsigned int feature)
 {
+#ifdef CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS
+	(void)feature;
+	wrmsrl(msr, val);
+#else
 	asm volatile(ALTERNATIVE("", "wrmsr", %c[feature])
 		: : "c" (msr),
 		    "a" ((u32)val),
 		    "d" ((u32)(val >> 32)),
 		    [feature] "i" (feature)
 		: "memory");
+#endif
 }
 
 extern u64 x86_pred_cmd;

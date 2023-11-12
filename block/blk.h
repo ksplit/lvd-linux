@@ -390,8 +390,10 @@ static inline bool blk_queue_may_bounce(struct request_queue *q)
 static inline struct bio *blk_queue_bounce(struct bio *bio,
 		struct request_queue *q)
 {
+#ifdef CONFIG_BOUNCE
 	if (unlikely(blk_queue_may_bounce(q) && bio_has_data(bio)))
 		return __blk_queue_bounce(bio, q);
+#endif
 	return bio;
 }
 

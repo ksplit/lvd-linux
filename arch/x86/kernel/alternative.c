@@ -592,8 +592,8 @@ void __init_or_module noinline apply_returns(s32 *start, s32 *end) { }
 
 #else /* !CONFIG_RETPOLINE || !CONFIG_OBJTOOL */
 
-void __init_or_module noinline apply_retpolines(s32 *start, s32 *end) { }
-void __init_or_module noinline apply_returns(s32 *start, s32 *end) { }
+void __always_inline __init_or_module noinline apply_retpolines(s32 *start, s32 *end) { }
+void __always_inline __init_or_module noinline apply_returns(s32 *start, s32 *end) { }
 
 #endif /* CONFIG_RETPOLINE && CONFIG_OBJTOOL */
 
@@ -943,8 +943,8 @@ void __init alternative_instructions(void)
 	 * Rewrite the retpolines, must be done before alternatives since
 	 * those can rewrite the retpoline thunks.
 	 */
-	apply_retpolines(__retpoline_sites, __retpoline_sites_end);
-	apply_returns(__return_sites, __return_sites_end);
+	//apply_retpolines(__retpoline_sites, __retpoline_sites_end);
+	//apply_returns(__return_sites, __return_sites_end);
 
 	/*
 	 * Then patch alternatives, such that those paravirt calls that are in
@@ -952,7 +952,7 @@ void __init alternative_instructions(void)
 	 */
 	apply_alternatives(__alt_instructions, __alt_instructions_end);
 
-	apply_ibt_endbr(__ibt_endbr_seal, __ibt_endbr_seal_end);
+	//apply_ibt_endbr(__ibt_endbr_seal, __ibt_endbr_seal_end);
 
 #ifdef CONFIG_SMP
 	/* Patch to UP if other cpus not imminent. */

@@ -1408,6 +1408,14 @@ choice
 	prompt "Compiler optimization level"
 	default CC_OPTIMIZE_FOR_PERFORMANCE
 
+config CC_OPTIMIZE_FOR_STATIC_ANALYSIS
+	bool "Optimize for static analysis (-O0)"
+	help
+	  This is the default optimization level for the kernel, building
+	  with the "-O0" compiler flag for ensuring lowest level of optimization
+          that retains maximum information at the LLVM IR level for static analysis.
+
+
 config CC_OPTIMIZE_FOR_PERFORMANCE
 	bool "Optimize for performance (-O2)"
 	help

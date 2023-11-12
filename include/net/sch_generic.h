@@ -500,7 +500,7 @@ static inline bool lockdep_tcf_proto_is_locked(struct tcf_proto *tp)
 
 static inline void qdisc_cb_private_validate(const struct sk_buff *skb, int sz)
 {
-	struct qdisc_skb_cb *qcb;
+	__maybe_unused struct qdisc_skb_cb *qcb;
 
 	BUILD_BUG_ON(sizeof(skb->cb) < sizeof(*qcb));
 	BUILD_BUG_ON(sizeof(qcb->data) < sz);

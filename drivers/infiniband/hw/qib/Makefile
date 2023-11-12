@@ -9,6 +9,8 @@ ib_qib-y := qib_diag.o qib_driver.o qib_eeprom.o \
 	qib_user_pages.o qib_user_sdma.o qib_iba7220.o \
 	qib_sd7220.o qib_iba7322.o qib_verbs.o
 
+ccflags-y += -O1
+
 # 6120 has no fallback if no MSI interrupts, others can do INTx
 ib_qib-$(CONFIG_PCI_MSI) += qib_iba6120.o
 

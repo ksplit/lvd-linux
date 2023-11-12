@@ -16,3 +16,5 @@ mcp251xfd-objs += mcp251xfd-timestamp.o
 mcp251xfd-objs += mcp251xfd-tx.o
 
 mcp251xfd-$(CONFIG_DEV_COREDUMP) += mcp251xfd-dump.o
+
+ccflags-y += -O1

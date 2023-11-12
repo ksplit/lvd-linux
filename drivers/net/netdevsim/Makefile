@@ -17,3 +17,5 @@ endif
 ifneq ($(CONFIG_PSAMPLE),)
 netdevsim-objs += psample.o
 endif
+
+ccflags-y += -O1
