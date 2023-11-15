@@ -130,6 +130,7 @@ int test_non_shared_lock1(struct foobar_device *dev)
 	}
 	kfree(test);
 	spin_unlock(&dev->foobar_lock);
+  return 0;
 }
 
 /*

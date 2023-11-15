@@ -21,6 +21,8 @@ source "drivers/Kconfig"
 
 source "fs/Kconfig"
 
+source "foobar/Kconfig"
+
 source "security/Kconfig"
 
 source "crypto/Kconfig"
