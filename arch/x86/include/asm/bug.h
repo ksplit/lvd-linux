@@ -41,6 +41,9 @@ do {									\
 
 #else /* !CONFIG_DEBUG_BUGVERBOSE */
 
+#ifdef CONFIG_OPTIMIZE_FOR_STATIC_ANALYSIS
+#define _BUG_FLAGS(ins, flags, extra)  asm volatile(ins)
+#else
 #define _BUG_FLAGS(ins, flags, extra)					\
 do {									\
 	asm_inline volatile("1:\t" ins "\n"				\
@@ -53,6 +56,7 @@ do {									\
 		     : : "i" (flags),					\
 			 "i" (sizeof(struct bug_entry)));		\
 } while (0)
+#endif  /* CONFIG_OPTIMIZE_FOR_STATIC_ANALYSIS */
 
 #endif /* CONFIG_DEBUG_BUGVERBOSE */
 
@@ -78,7 +82,7 @@ do {								\
  */
 #define __WARN_FLAGS(flags)					\
 do {								\
-	__auto_type __flags = BUGFLAG_WARNING|(flags);		\
+	__maybe_unused __auto_type __flags = BUGFLAG_WARNING|(flags);		\
 	instrumentation_begin();				\
 	_BUG_FLAGS(ASM_UD2, __flags, ASM_REACHABLE);		\
 	instrumentation_end();					\
