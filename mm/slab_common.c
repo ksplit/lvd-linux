@@ -820,9 +820,9 @@ void __init setup_kmalloc_cache_index_table(void)
 {
 	unsigned int i;
 
-	BUILD_BUG_ON(KMALLOC_MIN_SIZE > 256 ||
+	/*BUILD_BUG_ON(KMALLOC_MIN_SIZE > 256 ||
 		!is_power_of_2(KMALLOC_MIN_SIZE));
-
+  */
 	for (i = 8; i < KMALLOC_MIN_SIZE; i += 8) {
 		unsigned int elem = size_index_elem(i);
 

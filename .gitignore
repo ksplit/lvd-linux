@@ -168,3 +168,8 @@ sphinx_*/
 
 # Rust analyzer configuration
 /rust-project.json
+
+# KSplit files
+*.o.bc
+*.ko.bc
+*.bc

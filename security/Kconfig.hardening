@@ -28,7 +28,7 @@ config CC_HAS_AUTO_VAR_INIT_ZERO_BARE
 config CC_HAS_AUTO_VAR_INIT_ZERO_ENABLER
 	# Clang 16 and later warn about using the -enable flag, but it
 	# is required before then.
-	def_bool $(cc-option,-ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang)
+	def_bool $(cc-option,-ftrivial-auto-var-init=zero)
 	depends on !CC_HAS_AUTO_VAR_INIT_ZERO_BARE
 
 config CC_HAS_AUTO_VAR_INIT_ZERO

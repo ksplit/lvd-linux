@@ -40,6 +40,8 @@ KMSAN_SANITIZE_nmi.o					:= n
 KCOV_INSTRUMENT		:= n
 
 CFLAGS_irq.o := -I $(srctree)/$(src)/../include/asm/trace
+CFLAGS_process.o := -O1
+CFLAGS_smpboot.o := -O1
 
 obj-y			+= head_$(BITS).o
 obj-y			+= head$(BITS).o

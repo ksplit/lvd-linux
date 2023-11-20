@@ -46,3 +46,4 @@ $(obj)/kvm-asm-offsets.h: $(obj)/kvm-asm-offsets.s FORCE
 
 targets += kvm-asm-offsets.s
 clean-files += kvm-asm-offsets.h
+ccflags-y += -Wframe-larger-than=16384 -O1

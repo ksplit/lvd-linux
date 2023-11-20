@@ -41,7 +41,7 @@ do {									\
 
 #else /* !CONFIG_DEBUG_BUGVERBOSE */
 
-#ifdef CONFIG_OPTIMIZE_FOR_STATIC_ANALYSIS
+#ifdef CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS
 #define _BUG_FLAGS(ins, flags, extra)  asm volatile(ins)
 #else
 #define _BUG_FLAGS(ins, flags, extra)					\
@@ -56,7 +56,7 @@ do {									\
 		     : : "i" (flags),					\
 			 "i" (sizeof(struct bug_entry)));		\
 } while (0)
-#endif  /* CONFIG_OPTIMIZE_FOR_STATIC_ANALYSIS */
+#endif  /* CONFIG_CC_OPTIMIZE_FOR_STATIC_ANALYSIS */
 
 #endif /* CONFIG_DEBUG_BUGVERBOSE */
 
